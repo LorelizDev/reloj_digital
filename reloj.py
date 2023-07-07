@@ -1,18 +1,22 @@
 from tkinter import Label, Frame, Tk, messagebox, PhotoImage, Button
 from tkinter.ttk import *
-from time import strftime
+from datetime import datetime
 import threading, time
 from googletrans import Translator
 from pygame import mixer
+import pytz
+import requests
 
 # ---------------------- FUNCIONALIDAD DEL RELOJ ----------------------
 def update_clock():
-    label_hm.config(text=strftime ("%I:%M")) # Formato 12 horas
-    label_s.config(text=strftime ("%S"))
-    label_ampm.config(text=strftime ("%p"))
-    translated_day = translator.translate(strftime("%A"), dest='es').text
-    label_date.config(text=f"{translated_day}, {strftime('%d/%m/%Y')}")
-    label_s.after(900, update_clock)
+    try:
+        label_hm.config(text=datetime.now().strftime("%I:%M")) # Formato 12 horas
+        label_s.config(text=datetime.now().strftime("%S"))
+        label_ampm.config(text=datetime.now().strftime("%p"))
+        translated_day = translator.translate(datetime.now().strftime("%A"), dest='es').text
+        label_date.config(text=f'{translated_day}, {datetime.now().strftime("%d/%m/%Y")}')
+    finally:
+        label_s.after(200, update_clock)
 
 # ---------------------- FUNCIONALIDAD DE LA ALARMA ----------------------
 def switch():
@@ -28,14 +32,14 @@ def switch():
 
 def update_alarm():
     if is_on:
-        if alarm_h.get() == strftime("%I"):
-            if alarm_m.get() == strftime("%M"):
-                if int(strftime("%S")) == 00:
-                    if alarm_ampm.get() == strftime("%p"):
+        if alarm_h.get() == datetime.now().strftime("%I"):
+            if alarm_m.get() == datetime.now().strftime("%M"):
+                if int(datetime.now().strftime("%S")) == 00:
+                    if alarm_ampm.get() == datetime.now().strftime("%p"):
                         threading.Thread(target=play_alarm).start()
-                        messagebox.showinfo(message=strftime("%I:%M %p"), title="Alarma")
+                        messagebox.showinfo(message=datetime.now().strftime("%I:%M %p"), title="Alarma")
                         switch()
-    root.after(900, update_alarm)
+    root.after(200, update_alarm)
 
 def play_alarm():
     mixer.init()
@@ -175,6 +179,17 @@ def restore_timer():
     is_running = False
     play_stop_t()
 
+# ---------------------- FUNCIONALIDAD DEL RELOJ MUNDIAL -----------------------
+def world_time():
+    time_zone = pytz.timezone(box_locations.get())
+    current_time_location = datetime.now(time_zone)
+    label_world_hm.config(text=current_time_location.strftime("%I:%M"))
+    label_world_s.config(text=current_time_location.strftime("%S"))
+    label_world_ampm.config(text=current_time_location.strftime("%p"))
+    label_world_date.config(text=current_time_location.strftime("%d/%m/%Y"))
+    label_world_s.after(200, world_time)
+
+# ---------------------- FRAMES Y PESTAÑAS -----------------------
 root = Tk()
 root.title("Reloj digital by LorelizDev")
 
@@ -197,7 +212,9 @@ tabs.add(tab_timer, text="TEMPORIZADOR")
 tabs.add(tab_world, text="RELOJ MUNDIAL")
 
 frame_alarm = Frame(tab_alarm)
-frame_alarm.pack(pady=20)
+frame_alarm.pack(pady=(50,30))
+frame_audios = Frame(tab_alarm)
+frame_audios.pack(pady=20)
 
 frame_chrono = Frame(tab_chrono)
 frame_chrono.pack(pady=20)
@@ -212,6 +229,11 @@ frame_timer_config = Frame(tab_timer)
 frame_timer_config.pack()
 frame_timer_button = Frame(tab_timer)
 frame_timer_button.pack()
+
+frame_world = Frame(tab_world)
+frame_world.pack(pady=20)
+frame_locations = Frame(tab_world)
+frame_locations.pack(pady=10)
 
 # ---------------------- RELOJ -----------------------
 label_hm = Label(frame_hour, font=("Goudy Old Style", 100), text="H:M")
@@ -247,33 +269,33 @@ is_on = False
 
 alarm_h = Combobox(frame_alarm, values=list_h, font=("Goudy Old Style", 30), width=2, state="readonly")
 alarm_h.pack(side="left")
-alarm_h.set(strftime("%I"))
+alarm_h.set(datetime.now().strftime("%I"))
 
 label_colon = Label(frame_alarm, text=":", font=("Goudy Old Style", 40))
 label_colon.pack(side="left")
 
 alarm_m = Combobox(frame_alarm, values=list_m, font=("Goudy Old Style", 30), width=2, state="readonly")
 alarm_m.pack(side="left")
-alarm_m.set(strftime("%M"))
+alarm_m.set(datetime.now().strftime("%M"))
 
 alarm_ampm = Combobox(frame_alarm, values=["AM", "PM"], font=("Goudy Old Style", 20), width=3, state="readonly")
 alarm_ampm.pack(side="left", ipady=7)
-alarm_ampm.set(strftime("%p"))
+alarm_ampm.set(datetime.now().strftime("%p"))
 
 switch_alarm = Button(frame_alarm, image=off, command=switch)
-switch_alarm.pack(side="right")
+switch_alarm.pack(side="right", padx=10)
 
-label_audios = Label(tab_alarm, text="Audio:", font=("Goudy Old Style", 16))
+label_audios = Label(frame_audios, text="Audio:", font=("Goudy Old Style", 16))
 label_audios.pack(side="left", padx=(30,5))
 
-alarm_audios = Combobox(tab_alarm, values=list_audios, state="readonly",font=("Goudy Old Style", 14), width=15)
+alarm_audios = Combobox(frame_audios, values=list_audios, state="readonly",font=("Goudy Old Style", 14), width=15)
 alarm_audios.pack(side="left")
 alarm_audios.current(0)
 
-label_duration = Label(tab_alarm, text="Duración:", font=("Goudy Old Style", 16))
+label_duration = Label(frame_audios, text="Duración:", font=("Goudy Old Style", 16))
 label_duration.pack(side="left", padx=(50,5))
 
-duration = Combobox(tab_alarm, values=(5,10,15,20,25,30), state="readonly", width=5, font=("Goudy Old Style", 14))
+duration = Combobox(frame_audios, values=(5,10,15,20,25,30), state="readonly", width=5, font=("Goudy Old Style", 14))
 duration.pack(side="left", padx=(0, 30))
 duration.current(1)
 
@@ -350,5 +372,29 @@ timer_play.grid(row=0, column=0)
 
 timer_restore = Button(frame_timer_button, image=restore, command=restore_timer)
 timer_restore.grid(row=0, column=1)
+
+# ---------------------- RELOJ MUNDIAL -----------------------
+locations = ['Africa/Cairo', 'Africa/Johannesburg', 'Africa/Lagos', 'Africa/Luanda', 'Africa/Nairobi', 'America/Argentina/Buenos_Aires', 'America/Asuncion', 'America/Barbados', 'America/Bogota', 'America/Caracas', 'America/Chicago', 'America/El_Salvador', 'America/Jamaica', 'America/La_Paz', 'America/Lima', 'America/Los_Angeles', 'America/Mexico_City', 'America/New_York', 'America/Panama', 'America/Santiago', 'America/Santo_Domingo', 'America/Sao_Paulo', 'Asia/Amman', 'Asia/Baghdad', 'Asia/Beirut', 'Asia/Dubai', 'Asia/Hong_Kong', 'Asia/Jerusalem', 'Asia/Qatar', 'Asia/Seoul', 'Asia/Shanghai', 'Asia/Singapore', 'Asia/Tokyo', 'Atlantic/Cape_Verde', 'Australia/Sydney', 'Europe/Amsterdam', 'Europe/Berlin', 'Europe/Brussels', 'Europe/Budapest', 'Europe/Dublin', 'Europe/Istanbul', 'Europe/Lisbon', 'Europe/London', 'Europe/Luxembourg', 'Europe/Madrid', 'Europe/Moscow', 'Europe/Paris', 'Europe/Rome', 'Europe/Vatican', 'Europe/Vienna', 'Europe/Zurich', 'GMT', 'Pacific/Auckland', 'Pacific/Easter', 'US/Alaska',  'US/Central', 'US/Eastern', 'US/Hawaii', 'US/Pacific', 'UTC']
+
+label_world_hm = Label(frame_world, font=("Goudy Old Style", 50), text="H:M")
+label_world_hm.grid(row=0, column=0, rowspan=2)
+
+label_world_s = Label(frame_world, font=("Goudy Old Style", 30), text="s")
+label_world_s.grid(row=0, column=1, sticky="n")
+
+label_world_ampm = Label(frame_world, font=("Goudy Old Style", 20), text="am/pm")
+label_world_ampm.grid(row=1, column=1)
+
+label_world_date = Label(frame_world, font=("Goudy Old Style", 16), text="dd/mm/Y")
+label_world_date.grid(row=3, columnspan=2, pady=10)
+
+label_locations = Label(frame_locations, font=("Goudy Old Style", 20), text="Ubicación:")
+label_locations.grid(row=0, column=0, padx=10)
+
+box_locations = Combobox(frame_locations, values=locations, font=("Goudy Old Style", 16), state="readonly")
+box_locations.grid(row=0, column=1)
+box_locations.set(locations[-1])
+
+world_time()
 
 root.mainloop()

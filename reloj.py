@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from tkinter import Label, Frame, Tk, messagebox, PhotoImage, Button
 from tkinter.ttk import *
 from datetime import datetime
@@ -15,8 +17,12 @@ def update_clock():
         label_ampm.config(text=datetime.now().strftime("%p"))
         translated_day = translator.translate(datetime.now().strftime("%A"), dest='es').text
         label_date.config(text=f'{translated_day}, {datetime.now().strftime("%d/%m/%Y")}')
-    finally:
         label_s.after(200, update_clock)
+    except:
+        root.destroy() # Cerrar la ventana principal
+        python = sys.executable # Reiniciar la aplicación
+        cmd = [python] + sys.argv
+        subprocess.call(cmd) # Ejecutar nuevamente el script Python
 
 # ---------------------- FUNCIONALIDAD DE LA ALARMA ----------------------
 def switch():
@@ -61,10 +67,7 @@ def start_stop():
         stop_button.grid_forget()
         start_button.grid(column=0, row=0)
         if click_restore:
-            start_button.config(text="Iniciar")
             click_restore = False
-        else:
-            start_button.config(text="Continuar")
     else:
         click_start = True
         start_button.grid_forget()
@@ -118,8 +121,6 @@ def restore_chrono():
     if click_start:
         click_restore = True
         start_stop_t()
-    else:
-        start_button.config(text="Iniciar")
 
 # ---------------------- FUNCIONALIDAD DEL TEMPORIZADOR ----------------------
 def click_play():
@@ -189,6 +190,26 @@ def world_time():
     label_world_date.config(text=current_time_location.strftime("%d/%m/%Y"))
     label_world_s.after(200, world_time)
 
+# ---------------------- CLIMA MUNDIAL -----------------------
+def get_city(locations, location):
+    for city, loc in locations.items():
+        if loc == location:
+            return city
+
+def wheater():
+    city = get_city(locations, box_locations.get())
+
+    if city != "GMT" and city != "UTC":
+        API = f'https://api.openweathermap.org/data/2.5/weather?q={city}&units=metric&lang=es&appid=2d870eb188bdc4d8c687ae187bd09444'
+        json_data = requests.get(API).json()
+        label_temp.config(text=f"{int(json_data['main']['temp'])} ºC")
+        label_description_w.config(text=json_data['weather'][0]['description'])
+    else:
+        label_temp.config(text="-")
+        label_description_w.config(text="-")
+
+    label_temp.after(200, wheater)
+
 # ---------------------- FRAMES Y PESTAÑAS -----------------------
 root = Tk()
 root.title("Reloj digital by LorelizDev")
@@ -228,12 +249,12 @@ frame_timer.pack(pady=20)
 frame_timer_config = Frame(tab_timer)
 frame_timer_config.pack()
 frame_timer_button = Frame(tab_timer)
-frame_timer_button.pack()
+frame_timer_button.pack(pady=20)
 
 frame_world = Frame(tab_world)
 frame_world.pack(pady=20)
 frame_locations = Frame(tab_world)
-frame_locations.pack(pady=10)
+frame_locations.pack()
 
 # ---------------------- RELOJ -----------------------
 label_hm = Label(frame_hour, font=("Goudy Old Style", 100), text="H:M")
@@ -306,6 +327,10 @@ chrono_s = "00"
 click_start = False
 click_restore = False
 laps = 0
+play = PhotoImage(file="img/play.png")
+pause = PhotoImage(file="img/pause.png")
+restore = PhotoImage(file="img/restore.png")
+lap_image = PhotoImage(file="img/lap.png")
 
 label_chrono = Label(frame_chrono, font=("Goudy Old Style", 50), text="00:00:00")
 label_chrono.pack()
@@ -325,22 +350,19 @@ lap_4.grid(row=0, column=3, padx=15)
 lap_5 = Label(frame_laps, font=("Goudy Old Style", 14), text="Vuelta 5")
 lap_5.grid(row=0, column=4, padx=15)
 
-stop_button = Button(frame_chrono_buttons, width=20, text="Detener", command=start_stop_t)
+stop_button = Button(frame_chrono_buttons, width=20, image=pause, command=start_stop_t)
 stop_button.grid(row=0, column=0)
 
-start_button = Button(frame_chrono_buttons, width=20, text="Iniciar", command=start_stop_t)
+start_button = Button(frame_chrono_buttons, width=20, image=play, command=start_stop_t)
 start_button.grid(row=0, column=0)
 
-lap_button = Button(frame_chrono_buttons, width=20, text="Vuelta", command=lap)
+lap_button = Button(frame_chrono_buttons, width=20, image=lap_image, command=lap)
 lap_button.grid(row=0, column=1)
 
-restore_button = Button(frame_chrono_buttons, width=20, text="Restablecer", command=restore_chrono)
+restore_button = Button(frame_chrono_buttons, width=20, image=restore, command=restore_chrono)
 restore_button.grid(row=0, column=2)
 
 # ---------------------- TEMPORIZADOR ----------------------
-play = PhotoImage(file="img/play.png")
-pause = PhotoImage(file="img/pause.png")
-restore = PhotoImage(file="img/restore.png")
 is_running = 0
 timer_hh = "00"
 timer_mm = "00"
@@ -374,7 +396,12 @@ timer_restore = Button(frame_timer_button, image=restore, command=restore_timer)
 timer_restore.grid(row=0, column=1)
 
 # ---------------------- RELOJ MUNDIAL -----------------------
-locations = ['Africa/Cairo', 'Africa/Johannesburg', 'Africa/Lagos', 'Africa/Luanda', 'Africa/Nairobi', 'America/Argentina/Buenos_Aires', 'America/Asuncion', 'America/Barbados', 'America/Bogota', 'America/Caracas', 'America/Chicago', 'America/El_Salvador', 'America/Jamaica', 'America/La_Paz', 'America/Lima', 'America/Los_Angeles', 'America/Mexico_City', 'America/New_York', 'America/Panama', 'America/Santiago', 'America/Santo_Domingo', 'America/Sao_Paulo', 'Asia/Amman', 'Asia/Baghdad', 'Asia/Beirut', 'Asia/Dubai', 'Asia/Hong_Kong', 'Asia/Jerusalem', 'Asia/Qatar', 'Asia/Seoul', 'Asia/Shanghai', 'Asia/Singapore', 'Asia/Tokyo', 'Atlantic/Cape_Verde', 'Australia/Sydney', 'Europe/Amsterdam', 'Europe/Berlin', 'Europe/Brussels', 'Europe/Budapest', 'Europe/Dublin', 'Europe/Istanbul', 'Europe/Lisbon', 'Europe/London', 'Europe/Luxembourg', 'Europe/Madrid', 'Europe/Moscow', 'Europe/Paris', 'Europe/Rome', 'Europe/Vatican', 'Europe/Vienna', 'Europe/Zurich', 'GMT', 'Pacific/Auckland', 'Pacific/Easter', 'US/Alaska',  'US/Central', 'US/Eastern', 'US/Hawaii', 'US/Pacific', 'UTC']
+locations = {'Cairo':'Africa/Cairo', 'Johannesburg':'Africa/Johannesburg', 'Lagos':'Africa/Lagos', 'Luanda':'Africa/Luanda', 'Nairobi':'Africa/Nairobi', 'Buenos Aires':'America/Argentina/Buenos_Aires', 'Asuncion':'America/Asuncion', 'Barbados':'America/Barbados', 'Bogota':'America/Bogota', 'Caracas':'America/Caracas', 'Chicago':'America/Chicago', 'El Salvador':'America/El_Salvador', 'Guayaquil':'America/Guayaquil', 'Jamaica':'America/Jamaica', 'La Paz':'America/La_Paz', 'Lima':'America/Lima', 'Los Angeles':'America/Los_Angeles', 'Mexico City':'America/Mexico_City', 'New York':'America/New_York', 'Panama':'America/Panama', 'Santiago':'America/Santiago', 'Santo Domingo':'America/Santo_Domingo', 'Sao Paulo':'America/Sao_Paulo', 'Amman':'Asia/Amman', 'Baghdad':'Asia/Baghdad', 'Beirut':'Asia/Beirut', 'Dubai':'Asia/Dubai', 'Hong Kong':'Asia/Hong_Kong', 'Jerusalem':'Asia/Jerusalem', 'Qatar':'Asia/Qatar', 'Seoul':'Asia/Seoul', 'Shanghai':'Asia/Shanghai', 'Singapore':'Asia/Singapore', 'Tokyo':'Asia/Tokyo', 'Cabo Verde':'Atlantic/Cape_Verde', 'Sydney':'Australia/Sydney', 'Amsterdam':'Europe/Amsterdam', 'Berlin':'Europe/Berlin', 'Brussels':'Europe/Brussels', 'Budapest':'Europe/Budapest', 'Dublin':'Europe/Dublin', 'Istanbul':'Europe/Istanbul', 'Lisbon':'Europe/Lisbon', 'London':'Europe/London', 'Luxembourg':'Europe/Luxembourg', 'Madrid':'Europe/Madrid', 'Moscow':'Europe/Moscow', 'Paris':'Europe/Paris', 'Rome':'Europe/Rome', 'Vatican':'Europe/Vatican', 'Vienna':'Europe/Vienna', 'Zurich':'Europe/Zurich', 'GMT':'GMT', 'Auckland':'Pacific/Auckland', 'Easter':'Pacific/Easter', 'Alaska':'US/Alaska',  'Central':'US/Central', 'Eastern':'US/Eastern', 'Hawaii':'US/Hawaii', 'Pacific':'US/Pacific', 'UTC':'UTC'}
+
+list_locations = []
+
+for loc in locations.values():
+    list_locations.append(loc)
 
 label_world_hm = Label(frame_world, font=("Goudy Old Style", 50), text="H:M")
 label_world_hm.grid(row=0, column=0, rowspan=2)
@@ -391,10 +418,19 @@ label_world_date.grid(row=3, columnspan=2, pady=10)
 label_locations = Label(frame_locations, font=("Goudy Old Style", 20), text="Ubicación:")
 label_locations.grid(row=0, column=0, padx=10)
 
-box_locations = Combobox(frame_locations, values=locations, font=("Goudy Old Style", 16), state="readonly")
+box_locations = Combobox(frame_locations, values=list_locations, font=("Goudy Old Style", 16), state="readonly")
 box_locations.grid(row=0, column=1)
-box_locations.set(locations[-1])
+box_locations.set(list_locations[0])
 
 world_time()
+
+# ---------------------- CLIMA MUNDIAL -----------------------
+label_temp = Label(frame_world, font=("Goudy Old Style", 20))
+label_temp.grid(row=4, columnspan=2)
+
+label_description_w = Label(frame_world, font=("Goudy Old Style", 16))
+label_description_w.grid(row=5, columnspan=2)
+
+wheater()
 
 root.mainloop()
